@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Matrix Calculator</title>
+    <style>
+        /* --- GLOBAL VARIABLES (Matching Your Portfolio Theme) --- */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --calc-bg: rgba(30, 41, 59, 0.7);
+            --screen-bg: #0b0f19;
+            --primary-cyan: #00bcd4;
+            --primary-hover: #008ba3;
+            --text-light: #f8fafc;
+            --text-dark: #64748b;
+            --btn-normal: rgba(255, 255, 255, 0.05);
+            --btn-hover: rgba(255, 255, 255, 0.15);
+            --shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- BASE STYLES --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--bg-gradient);
+            padding: 20px;
+        }
+
+        /* --- CALCULATOR CONTAINER --- */
+        .calculator {
+            width: 100%;
+            max-width: 380px;
+            background: var(--calc-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* --- DISPLAY SCREEN --- */
+        .screen {
+            background-color: var(--screen-bg);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            text-align: right;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+        }
+
+        .previous-operand {
+            color: var(--text-dark);
+            font-size: 15px;
+            min-height: 20px;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            word-wrap: break-word;
+            word-break: break-all;
+        }
+
+        .current-operand {
+            color: var(--text-light);
+            font-size: 36px;
+            font-weight: 600;
+            min-height: 48px;
+            word-wrap: break-word;
+            word-break: break-all;
+            white-space: nowrap;
+        }
+
+        /* --- BUTTONS GRID --- */
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        button {
+            height: 64px;
+            border: none;
+            border-radius: 16px;
+            background: var(--btn-normal);
+            color: var(--text-light);
+            font-size: 20px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            user-select: none;
+        }
+
+        button:hover {
+            background: var(--btn-hover);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* --- SPECIAL BUTTON STYLES --- */
+        .operator {
+            color: var(--primary-cyan);
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .clear, .delete {
+            color: #ef4444;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .equals {
+            grid-column: span 2;
+            background: var(--primary-cyan);
+            color: #0f172a;
+            font-weight: 700;
+            font-size: 24px;
+        }
+
+        .equals:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 0 15px rgba(0, 188, 212, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="calculator">
+        <!-- Display Screen Area -->
+        <div class="screen">
+            <div id="previousDisplay" class="previous-operand"></div>
+            <div id="currentDisplay" class="current-operand">0</div>
+        </div>
+
+        <!-- Inputs Button Workspace -->
+        <div class="buttons-grid">
+            <button class="clear" onclick="clearScreen()">AC</button>
+            <button class="delete" onclick="deleteDigit()">DEL</button>
+            <button class="operator" onclick="appendOperator('%')">%</button>
+            <button class="operator" onclick="appendOperator('÷')">÷</button>
+
+            <button onclick="appendNumber('7')">7</button>
+            <button onclick="appendNumber('8')">8</button>
+            <button onclick="appendNumber('9')">9</button>
+            <button class="operator" onclick="appendOperator('×')">×</button>
+
+            <button onclick="appendNumber('4')">4</button>
+            <button onclick="appendNumber('5')">5</button>
+            <button onclick="appendNumber('6')">6</button>
+            <button class="operator" onclick="appendOperator('-')">-</button>
+
+            <button onclick="appendNumber('1')">1</button>
+            <button onclick="appendNumber('2')">2</button>
+            <button onclick="appendNumber('3')">3</button>
+            <button class="operator" onclick="appendOperator('+')">+</button>
+
+            <button onclick="appendNumber('0')">0</button>
+            <button onclick="appendNumber('.')">.</button>
+            <button class="equals" onclick="compute()">=</button>
+        </div>
+    </div>
+
+    <!-- Arithmetic Core JavaScript Engines -->
+    <script>
+        const currentDisplay = document.getElementById('currentDisplay');
+        const previousDisplay = document.getElementById('previousDisplay');
+        
+        let currentValue = '0';
+        let previousValue = '';
+        let activeOperator = null;
+        let shouldResetScreen = false;
+
+        function clearScreen() {
+            currentValue = '0';
+            previousValue = '';
+            activeOperator = null;
+            updateDisplay();
+        }
+
+        function deleteDigit() {
+            if (currentValue === '0') return;
+            if (currentValue.length === 1) {
+                currentValue = '0';
+            } else {
+                currentValue = currentValue.slice(0, -1);
+            }
+            updateDisplay();
+        }
+
+        function appendNumber(number) {
+            if (number === '.' && currentValue.includes('.')) return;
+            if (currentValue === '0' && number !== '.') {
+                currentValue = number;
+            } else if (shouldResetScreen) {
+                currentValue = number;
+                shouldResetScreen = false;
+            } else {
+                currentValue += number;
+            }
+            updateDisplay();
+        }
+
+        function appendOperator(operator) {
+            if (activeOperator !== null) compute();
+            previousValue = currentValue;
+            activeOperator = operator;
+            shouldResetScreen = true;
+            updateDisplay();
+        }
+
+        function compute() {
+            if (activeOperator === null || shouldResetScreen) return;
+            
+            const prev = parseFloat(previousValue);
+            const current = parseFloat(currentValue);
+            if (isNaN(prev) || isNaN(current)) return;
+
+            let result;
+            switch (activeOperator) {
+                case '+': result = prev + current; break;
+                case '-': result = prev - current; break;
+                case '×': result = prev * current; break;
+                case '÷': 
+                    if (current === 0) {
+                        alert("Error: Cannot divide by zero");
+                        clearScreen();
+                        return;
+                    }
+                    result = prev / current; 
+                    break;
+                case '%': result = prev % current; break;
+                default: return;
+            }
+
+            // Fix potential floating point precision errors (e.g. 0.1 + 0.2)
+            currentValue = Math.round(result * 1e12) / 1e12;
+            currentValue = currentValue.toString();
+            activeOperator = null;
+            previousValue = '';
+            shouldResetScreen = true;
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            currentDisplay.innerText = currentValue;
+            if (activeOperator != null) {
+                previousDisplay.innerText = `${previousValue} ${activeOperator}`;
+            } else {
+                previousDisplay.innerText = '';
+            }
+        }
+
+        // Native Physical Keyboard Support Mapping
+        window.addEventListener('keydown', (e) => {
+            if (e.key >= 0 && e.key <= 9) appendNumber(e.key);
+            if (e.key === '.') appendNumber(e.key);
+            if (e.key === '=' || e.key === 'Enter') { e.preventDefault(); compute(); }
+            if (e.key === 'Backspace') deleteDigit();
+            if (e.key === 'Escape') clearScreen();
+            if (e.key === '+') appendOperator('+');
+            if (e.key === '-') appendOperator('-');
+            if (e.key === '*') appendOperator('×');
+            if (e.key === '/') { e.preventDefault(); appendOperator('÷'); }
+            if (e.key === '%') appendOperator('%');
+        });
+    </script>
+</body>
+</html>
